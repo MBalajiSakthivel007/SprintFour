@@ -1,7 +1,7 @@
 # FixIt — PII Correction Experience
 
 **Sprintfour Hackathon 2026 · Problem 3: Fixing the Tool's Mistakes**  
-**Participant:** Balaji Sakthivel Marimuthu · CB.C.U4CSE23213
+**Participant:** Balaji Sakthivel Marimuthu · CB.SC.U4CSE23213
 
 ---
 

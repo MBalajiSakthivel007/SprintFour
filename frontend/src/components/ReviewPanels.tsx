@@ -1,5 +1,5 @@
 import React from 'react';
-import { PIISpan, SpanStatus } from '../types';
+import type { PIISpan, SpanStatus } from '../types';
 import { PIITypeBadge, ConfidenceBar } from './PIIBadge';
 
 interface FalsePositivePanelProps {

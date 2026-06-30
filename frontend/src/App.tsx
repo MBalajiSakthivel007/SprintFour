@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import './index.css';
-import { AnalyzeResponse, PIISpan } from './types';
+import type { AnalyzeResponse, PIISpan } from './types';
 import { analyzeDocument, checkHealth } from './services/api';
 import { usePIICorrections } from './hooks/usePIICorrections';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';

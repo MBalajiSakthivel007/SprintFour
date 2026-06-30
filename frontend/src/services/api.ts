@@ -1,4 +1,4 @@
-import { AnalyzeResponse, Correction, SessionSummary } from '../types';
+import type { AnalyzeResponse, Correction, SessionSummary } from '../types';
 
 const BASE_URL = 'http://localhost:3001/api';
 

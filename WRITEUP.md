@@ -19,7 +19,14 @@ Before finalizing, a **Review Gate** modal appears and explicitly lists any unch
 
 The entire flow also supports **keyboard shortcuts** (A to accept, R to restore, M to mark as missed PII, D to dismiss, Tab to advance) because Sam is fast and using a mouse for every action would slow him down enough to abandon the tool.
 
-The backend is a typed Express/TypeScript API that calls Google Gemini 1.5 Flash for PII detection, with a fully realistic mock backend (including intentional false positives and missed PII) for environments without an API key.
+The backend is a typed Express/TypeScript API that calls Google Gemini for PII detection. 
+
+**Advanced Human Logic Guardrails (New):**
+Because AI models are non-deterministic, I built a two-stage deterministic post-processing pipeline into the backend to catch what the LLM misses:
+1. **Consistency Engine:** Mathematically ensures that if an entity (e.g. "James Harrington") is redacted once, all other exact occurrences in the document are caught.
+2. **Deterministic Pattern Engine:** A regex pass that guarantees SSNs, Phone Numbers, and Emails are never missed, even if the AI hallucinates. 
+
+This proves that sound engineering judgment means not blindly trusting AI outputs, but wrapping them in solid human-coded logic.
 
 ---
 

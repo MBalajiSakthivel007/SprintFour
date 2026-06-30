@@ -1,5 +1,5 @@
 import React from 'react';
-import { PIIType } from '../types';
+import type { PIIType } from '../types';
 
 const TYPE_ICONS: Record<PIIType, string> = {
   NAME: '👤',

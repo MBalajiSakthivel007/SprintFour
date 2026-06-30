@@ -1,5 +1,5 @@
 import React from 'react';
-import { PIISpan } from '../types';
+import type { PIISpan } from '../types';
 
 interface ReviewGateProps {
   dangerousUnchecked: PIISpan[];

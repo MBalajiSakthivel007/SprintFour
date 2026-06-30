@@ -35,6 +35,10 @@ Case Notes:
   The defendant's employer, Meridian Technologies Inc., is not a party
   to this case. Their HR contact is listed as reference only.
   
+  [LATE ADDITION]: James Harrington was seen at the facility.
+  Also forward compliance checks to compliance.audit@meridian.com.
+  Employee ID tied to this record is 999-88-7777.
+  
 Emergency Contact: Robert Harrington — (415) 882-0034
 SSN (partial): ***-**-7721
 `;
@@ -227,7 +231,7 @@ async function detectWithGemini(documentText: string): Promise<PIISpan[]> {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
   const prompt = `${GEMINI_SYSTEM_PROMPT}\n\nDocument text:\n\`\`\`\n${documentText}\n\`\`\``;
 
@@ -274,20 +278,114 @@ function detectWithMock(): PIISpan[] {
 }
 
 /**
+ * Deterministic Regex Engine to catch what the LLM misses.
+ */
+function runPatternEngine(documentText: string, existingSpans: PIISpan[]): PIISpan[] {
+  const newSpans: PIISpan[] = [];
+  
+  // Basic patterns
+  const patterns = [
+    { type: 'EMAIL' as PIIType, regex: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, reason: 'Caught by Regex Pattern Engine (Email)' },
+    { type: 'PHONE' as PIIType, regex: /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, reason: 'Caught by Regex Pattern Engine (Phone)' },
+    { type: 'ID_NUMBER' as PIIType, regex: /\b\d{3}-\d{2}-\d{4}\b/g, reason: 'Caught by Regex Pattern Engine (SSN)' }
+  ];
+
+  for (const p of patterns) {
+    let match: RegExpExecArray | null;
+    while ((match = p.regex.exec(documentText)) !== null) {
+      const m = match;
+      const overlaps = existingSpans.some(
+        s => Math.max(s.startIndex, m.index) < Math.min(s.endIndex, m.index + m[0].length)
+      );
+      if (!overlaps) {
+        newSpans.push({
+          id: uuidv4(),
+          text: m[0],
+          startIndex: m.index,
+          endIndex: m.index + m[0].length,
+          type: p.type,
+          confidence: 1.0,
+          reason: p.reason,
+          isRedacted: false // Flag as missed!
+        });
+      }
+    }
+  }
+  return newSpans;
+}
+
+/**
+ * Ensures if an entity is redacted once, all other exact occurrences are caught.
+ */
+function runConsistencyEngine(documentText: string, existingSpans: PIISpan[]): PIISpan[] {
+  const newSpans: PIISpan[] = [];
+  
+  const redactedTexts = new Set(
+    existingSpans
+      .filter(s => s.isRedacted && (s.type === 'NAME' || s.type === 'ORGANIZATION'))
+      .map(s => s.text)
+  );
+
+  for (const textToFind of redactedTexts) {
+    if (textToFind.length < 4) continue;
+    
+    let index = -1;
+    while ((index = documentText.indexOf(textToFind, index + 1)) !== -1) {
+      const endIndex = index + textToFind.length;
+      const overlaps = existingSpans.some(
+        s => Math.max(s.startIndex, index) < Math.min(s.endIndex, endIndex)
+      ) || newSpans.some(
+        s => Math.max(s.startIndex, index) < Math.min(s.endIndex, endIndex)
+      );
+      
+      if (!overlaps) {
+        const originalType = existingSpans.find(s => s.text === textToFind)?.type || 'OTHER';
+        newSpans.push({
+          id: uuidv4(),
+          text: textToFind,
+          startIndex: index,
+          endIndex,
+          type: originalType,
+          confidence: 1.0,
+          reason: 'Caught by Consistency Engine (Matches redacted entity elsewhere)',
+          isRedacted: false // Flag as missed!
+        });
+      }
+    }
+  }
+  return newSpans;
+}
+
+/**
  * Main PII detection entry point.
  * Uses Gemini if API key is available; falls back to mock otherwise.
  */
 export async function detectPII(
   documentText: string
 ): Promise<{ spans: PIISpan[]; mode: 'gemini' | 'mock' }> {
+  let spans: PIISpan[];
+  let mode: 'gemini' | 'mock';
+  
   try {
-    const spans = await detectWithGemini(documentText);
-    return { spans, mode: 'gemini' };
+    spans = await detectWithGemini(documentText);
+    mode = 'gemini';
   } catch (err) {
     console.warn(
       '[piiService] Gemini unavailable, using mock backend:',
       (err as Error).message
     );
-    return { spans: detectWithMock(), mode: 'mock' };
+    spans = detectWithMock();
+    mode = 'mock';
   }
+  
+  // ---------------------------------------------------------
+  // ADVANCED HUMAN LOGIC ENGINES (Post-Processing Pipeline)
+  // ---------------------------------------------------------
+  const patternSpans = runPatternEngine(documentText, spans);
+  spans.push(...patternSpans);
+  
+  const consistencySpans = runConsistencyEngine(documentText, spans);
+  spans.push(...consistencySpans);
+  
+  return { spans, mode };
 }

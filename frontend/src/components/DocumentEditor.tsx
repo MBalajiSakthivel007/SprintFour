@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { PIISpan, SpanStatus } from '../types';
+import type { PIISpan, SpanStatus } from '../types';
 import { PIITypeBadge } from './PIIBadge';
 
 interface DocumentEditorProps {

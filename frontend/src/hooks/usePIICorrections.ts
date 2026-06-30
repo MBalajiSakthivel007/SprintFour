@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { PIISpan, Correction, CorrectionAction, SpanStatus } from '../types';
+import type { PIISpan, Correction, CorrectionAction, SpanStatus } from '../types';
 import { saveCorrections as apiSaveCorrections } from '../services/api';
 
 /**
